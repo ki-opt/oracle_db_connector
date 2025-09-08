@@ -1,30 +1,31 @@
 # https://write-remember.com/archives/6770/
 
+import os
 import oracledb
-
-USER = 'RTKDM708'
-PASSWORD = 'rtkdm708'
-DNS_NAME = 'p'
+from dotenv import load_dotenv
 
 class DbConnector():
 	def __init__(self):
 		'''
 		'''
+		load_dotenv()
+		self.user = os.getenv('USER')
+		self.password = os.getenv('PASSWORD')
+		self.dns_name = os.getenv('DNS_NAME')
+
+
 		# thickモード有効化
 		#oracledb.init_oracle_client()
 	
 	def create_connection_pool(self,):
 		''' コネクションプールの作成
 		'''
-		# dnsnameの取得
-		dsn_name = 'p'
-
 		# コネクションプールの作成
 		self.pool = \
 			oracledb.create_pool(
-				user=USER,
-				password=PASSWORD,
-				dsn=dsn_name,
+				user=self.user,
+				password=self.password,
+				dsn=self.dns_name,
 				min=0,
 				max=3,
 			)
