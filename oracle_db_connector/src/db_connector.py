@@ -1,16 +1,6 @@
-
+# https://write-remember.com/archives/6770/
 
 import oracledb
-
-DSN = """
-(DESCRIPTION =
-	(ADDRESS = (PROTOCOL = TCP)(HOST = localhost)(PORT = 1521))
-	(CONNECT_DATA =
-		(SERVER = DEDICATED)
-		(SERVICE_NAME = orclpdb)
-	)
-)
-"""
 
 USER = 'RTKDM708'
 PASSWORD = 'rtkdm708'
@@ -20,7 +10,6 @@ class DbConnector():
 	def __init__(self):
 		'''
 		'''
-		#self.env = 'p'
 		# thickモード有効化
 		#oracledb.init_oracle_client()
 	
@@ -28,14 +17,14 @@ class DbConnector():
 		''' コネクションプールの作成
 		'''
 		# dnsnameの取得
-		#dsn_name = 'p'
+		dsn_name = 'p'
 
 		# コネクションプールの作成
 		self.pool = \
 			oracledb.create_pool(
 				user=USER,
 				password=PASSWORD,
-				dsn=DSN,
+				dsn=dsn_name,
 				min=0,
 				max=3,
 			)
@@ -60,3 +49,4 @@ class DbConnector():
 					"""
 				)
 				result = cursor.fetchall()
+				print(result)
