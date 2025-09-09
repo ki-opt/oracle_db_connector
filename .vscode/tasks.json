@@ -1,0 +1,42 @@
+{
+   "version": "2.0.0",
+   "tasks": [
+        {
+            "label": "Build pybind11 module",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "g++ -fPIC -shared -std=c++11 -O0 I /usr/include/python3.12 -Wall $(python3 -m pybind11 --includes) '${file}' -o '${fileBasenameNoExtension}.so' $(python3-config --ldflags --embed)"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            },
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        },
+		// debug以外のタスクを追加するならここ.最適化オプション外す=>-O0
+   ]
+}

@@ -13,7 +13,6 @@ class DbConnector():
 		self.password = os.getenv('PASSWORD')
 		self.dns_name = os.getenv('DNS_NAME')
 
-
 		# thickモード有効化
 		#oracledb.init_oracle_client()
 	
