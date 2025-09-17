@@ -1,4 +1,5 @@
-# oracle_db.py
+'''
+'''
 
 import oracledb
 

@@ -17,7 +17,10 @@
  * https://github.com/mcmtroffaes/inipp/blob/master/inipp/inipp.h
  * https://qiita.com/apiss/items/b67a758a6a03ff57c3b5
  * 
- * cmake 
+ * vscode intelligence: cmake tools
+ * 
+ * cmake -DCMAKE_BUILD_TYPE=Debug ..
+ * make run_cpp
  */
 
 #include <pybind11/pybind11.h>
@@ -39,7 +42,8 @@ private:
 	py::scoped_interpreter guard{}; // Python インタープリターを初期化
 
 public:
-	std::vector<std::map<std::string, std::string>> fetchDataAsString(
+	//std::vector<std::map<std::string, std::string>> fetchDataAsString(
+	int fetchDataAsString(
 		const std::string& user,
 		const std::string& password, 
 		const std::string& dsn_name,
@@ -47,11 +51,27 @@ public:
 	) {
 		
 		try {
-			py::module oracle_module = py::module::import("oracle_db");
-			py::object result = oracle_module.attr("get_oracle_data")(
+			py::module oracle_db_with_connection_pool = py::module::import("oracle_db_with_connection_pool");
+			/*py::object result = oracle_db_with_connection_pool.attr("get_oracle_data")(
 				user, password, dsn_name, query
+			);*/
+			
+			py::object py_oracle_db_connector_class = 
+				oracle_db_with_connection_pool.attr("PyOracleDbConnector");
+
+			py::object py_oracle_db_connector = py_oracle_db_connector_class(
+				user, password, dsn_name, 1, 3
 			);
 			
+			py::list sqls;
+			sqls.append(query);
+			sqls.append(query);
+
+			py::object result = py_oracle_db_connector.attr("run_queries_in_parallel")(sqls);
+			std::string result_str = py::str(result);
+			std::cout << result_str << std::endl;
+
+			/*
 			std::vector<std::map<std::string, std::string>> cpp_result;
 			
 			for (auto item : result) {
@@ -67,16 +87,21 @@ public:
 			}
 			
 			return cpp_result;
+			*/
+
+			return 0;
 			
 		} catch (py::error_already_set &e) {
 			std::cerr << "Python実行エラー: " << e.what() << std::endl;
-			return {};
+			//return {};
+			
+			return 1;
 		}
 	}
 };
 
 int main() {
-	OracleDbConnector db_manager;
+	OracleDbConnector oracle_db_connector;
 	
 	inipp::Ini<char> ini;
 	std::ifstream is("../config.ini");
@@ -89,16 +114,17 @@ int main() {
 	std::string query = "select * from t_store_weekly_sales where store_cd = '676584' and jan_cd = '010668'";
 	
 	// データを取得
-	auto data = db_manager.fetchDataAsString(user, password, dsn_name, query);
-	
+	//auto data = oracle_db_connector.fetchDataAsString(user, password, dsn_name, query);
+	oracle_db_connector.fetchDataAsString(user, password, dsn_name, query);
+
 	// 結果を表示
-	std::cout << "取得したデータ:" << std::endl;
+	/*std::cout << "取得したデータ:" << std::endl;
 	for (const auto& row : data) {
 		for (const auto& pair : row) {
 			std::cout << pair.first << ": " << pair.second << " ";
 		}
 		std::cout << std::endl;
-	}
+	}*/
 	
 	return 0;
 }
