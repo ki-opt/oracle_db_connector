@@ -2,10 +2,11 @@
 
 import oracledb
 
-def connect_to_oracle(username, password, dsn):
+def connect_to_oracle(user, password, dsn_name):
 	"""Oracle DBに接続"""
 	try:
-		connection = oracledb.connect(user=username, password=password, dsn=dsn)
+		#connection = oracledb.connect(user, password, dsn_name) => error
+		connection = oracledb.connect(user=user, password=password, dsn=dsn_name)
 		return connection
 	except oracledb.Error as error:
 		print(f"Oracle接続エラー: {error}")

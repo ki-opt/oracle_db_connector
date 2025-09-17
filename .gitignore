@@ -4,3 +4,7 @@ venv/*
 
 build/*
 !build/oracle_db.py
+
+inipp.h
+
+config.ini
