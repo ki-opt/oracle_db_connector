@@ -68,33 +68,22 @@ public:
 			sqls.append(query);
 
 			py::object result = py_oracle_db_connector.attr("run_queries_in_parallel")(sqls);
-			std::string result_str = py::str(result);
-			std::cout << result_str << std::endl;
+			//std::string result_str = py::str(result);
+			//std::cout << result << std::endl;
 
-			/*
-			std::vector<std::map<std::string, std::string>> cpp_result;
-			
-			for (auto item : result) {
-				std::map<std::string, std::string> row;
-				py::dict py_row = item.cast<py::dict>();
-				
-				for (auto pair : py_row) {
-					std::string key = pair.first.cast<std::string>();
-					std::string value = py::str(pair.second).cast<std::string>();
-					row[key] = value;
+			for (const auto &item : result) {
+				for (const auto &ele : item) {
+					const auto &row = ele.cast<py::tuple>();
+					std::cout << std::stoi(row[0].cast<std::string>()) << std::endl;
 				}
-				cpp_result.push_back(row);
 			}
-			
-			return cpp_result;
-			*/
 
 			return 0;
 			
 		} catch (py::error_already_set &e) {
 			std::cerr << "Python実行エラー: " << e.what() << std::endl;
 			//return {};
-			
+
 			return 1;
 		}
 	}
@@ -114,17 +103,8 @@ int main() {
 	std::string query = "select * from t_store_weekly_sales where store_cd = '676584' and jan_cd = '010668'";
 	
 	// データを取得
-	//auto data = oracle_db_connector.fetchDataAsString(user, password, dsn_name, query);
 	oracle_db_connector.fetchDataAsString(user, password, dsn_name, query);
 
-	// 結果を表示
-	/*std::cout << "取得したデータ:" << std::endl;
-	for (const auto& row : data) {
-		for (const auto& pair : row) {
-			std::cout << pair.first << ": " << pair.second << " ";
-		}
-		std::cout << std::endl;
-	}*/
 	
 	return 0;
 }
