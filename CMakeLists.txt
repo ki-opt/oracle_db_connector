@@ -51,6 +51,7 @@ set(SOURCES
 )
 #set(HEADER
 	#include/
+	#headerをここに書いてもよい, その場合はadd_executableを変更
 #)
 add_executable(main ${SOURCES})# ${HEADERS}) # headerを含める場合
 target_link_libraries(main PRIVATE pybind11::embed)	# pybind11のembedライブラリリンク
