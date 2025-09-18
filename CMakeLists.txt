@@ -1,4 +1,7 @@
-#
+# cmake -DCMAKE_BUILD_TYPE=Debug .. => debugモード
+# cmake .. => releaseモード(-O2)
+# make ビルド
+# make && ./main or make run_cppでビルド/実行
 
 
 # CMakeのバージョンを設定
