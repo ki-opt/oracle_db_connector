@@ -51,22 +51,28 @@ public:
 	) {
 		
 		try {
-			py::module oracle_db_with_connection_pool = py::module::import("oracle_db_with_connection_pool");
-			/*py::object result = oracle_db_with_connection_pool.attr("get_oracle_data")(
-				user, password, dsn_name, query
-			);*/
-			
-			py::object py_oracle_db_connector_class = 
-				oracle_db_with_connection_pool.attr("PyOracleDbConnector");
+	  		// プロジェクトのルートを指定
+			std::string project_root_path = "..";
+ 		   py::object sys = py::module::import("sys");
+ 		   sys.attr("path").attr("insert")(0, project_root_path);
 
-			py::object py_oracle_db_connector = py_oracle_db_connector_class(
-				user, password, dsn_name, 1, 3
-			);
+			py::module oracle_db_with_connection_pool_module = py::module::import("src.py.oracle_db_with_connection_pool");
+			py::object py_oracle_db_connector_object = 
+				oracle_db_with_connection_pool_module.attr("PyOracleDbConnector");
+
+			// PyOracleDbConnectorクラスの定義
+			py::object py_oracle_db_connector = 
+				py_oracle_db_connector_object(user, password, dsn_name);
+			py_oracle_db_connector.attr("create_connection_pool")();
 			
 			py::list sqls;
 			sqls.append(query);
 			sqls.append(query);
+			py_oracle_db_connector.attr("run_queries_in_parallel")(sqls);
+			
+			py_oracle_db_connector.attr("close_connection_pool")();
 
+			/*
 			py::object result = py_oracle_db_connector.attr("run_queries_in_parallel")(sqls);
 			//std::string result_str = py::str(result);
 			//std::cout << result << std::endl;
@@ -77,13 +83,13 @@ public:
 					std::cout << std::stoi(row[0].cast<std::string>()) << std::endl;
 				}
 			}
+			*/
 
 			return 0;
 			
 		} catch (py::error_already_set &e) {
 			std::cerr << "Python実行エラー: " << e.what() << std::endl;
 			//return {};
-
 			return 1;
 		}
 	}
