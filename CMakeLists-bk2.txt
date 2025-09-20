@@ -1,0 +1,173 @@
+# cmake -DTARGET_PLATFORM=linux -DCMAKE_BUILD_TYPE=Debug .. => debugモード
+# cmake -DTARGET_PLATFORM=linux .. => releaseモード(-O2)
+# make ビルド
+# make && ./main or make run_cppでビルド/実行
+
+
+# CMakeのバージョンを設定
+cmake_minimum_required(VERSION 3.13)
+
+# project名を設定
+project(OracleDbConnector)
+
+# C++標準(C++23)を設定
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ターゲットプラットフォームの設定
+# cmake -DTARGET_PLATFORM=windows .. => Windowsクロスコンパイル
+# cmake -DTARGET_PLATFORM=linux .. または cmake .. => Linux (デフォルト)
+set(TARGET_PLATFORM "linux" CACHE STRING "Target platform (linux or windows)")
+set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS "linux" "windows")
+
+# Windowsクロスコンパイルの設定
+if(TARGET_PLATFORM STREQUAL "windows")
+	message(STATUS "Configuring for Windows cross-compilation")
+	set(CMAKE_SYSTEM_NAME Windows)
+	set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)
+	set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
+	set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
+	set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
+	
+	# クロスコンパイル時の検索設定
+	set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+	set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+	set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+	set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+	
+	# 実行ファイルの拡張子
+	set(CMAKE_EXECUTABLE_SUFFIX .exe)
+else()
+	message(STATUS "Configuring for Linux")
+endif()
+
+# ビルドタイプの設定（デフォルトはRelease）
+# cmake -DCMAKE_BUILD_TYPE=Debug ..とすることでdebugモード
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Releaseモードの最適化レベルを-O2に変更
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+
+# 共通コンパイルオプション
+set(COMMON_COMPILE_OPTIONS
+	-Wall
+	-Wextra
+	-Wpedantic
+)
+
+# プラットフォーム固有の設定
+if(TARGET_PLATFORM STREQUAL "windows")
+	# Windows固有のコンパイルオプション
+	list(APPEND COMMON_COMPILE_OPTIONS
+		-static-libgcc
+		-static-libstdc++
+	)
+	# Windows固有のリンクオプション
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+endif()
+
+# Pythonを検索（プラットフォームに応じて）
+if(TARGET_PLATFORM STREQUAL "windows")
+	# Windowsクロスコンパイル時は、システムのPythonを使用せずに手動でパスを設定する必要がある場合があります
+	message(WARNING "Python detection for Windows cross-compilation might need manual configuration")
+	set(PYTHON_INCLUDE_DIR "/mnt/c/Users/rtkdm/AppData/Local/Programs/Python/Python313/include")
+	set(PYBIND11_INCLUDE_DIR "/mnt/c/Users/rtkdm/AppData/Local/Programs/Python/Python313/Lib/site-packages/pybind11/include")
+	# pybind11ターゲットを作成
+	if(EXISTS "${PYBIND11_INCLUDE_DIR}/pybind11/pybind11.h")
+		add_library(pybind11::pybind11 INTERFACE IMPORTED)
+		target_include_directories(pybind11::pybind11 INTERFACE ${PYBIND11_INCLUDE_DIR})
+		# Windows向けの特別な設定
+		target_compile_definitions(pybind11::pybind11 INTERFACE
+			WIN32_LEAN_AND_MEAN
+			NOMINMAX
+		)
+		add_library(pybind11::embed INTERFACE IMPORTED)
+		target_link_libraries(pybind11::embed INTERFACE pybind11::pybind11)
+		set(pybind11_FOUND TRUE)
+		message(STATUS "Using pybind11 include directory: ${PYBIND11_INCLUDE_DIR}")
+	else()
+		message(FATAL_ERROR 
+			"pybind11.h not found in WSL.\n"
+			"Please install pybind11 in WSL:\n"
+			"  pip3 install pybind11\n"
+			"  or\n"
+			"  sudo apt install pybind11-dev\n"
+			"Searched paths:\n${PYBIND11_CANDIDATES}"
+		)
+	endif()
+
+else()
+	find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+	# デバッグ情報を表示
+	message(STATUS "Python3_VERSION: ${Python3_VERSION}")
+	message(STATUS "Python3_EXECUTABLE: ${Python3_EXECUTABLE}")
+endif()
+
+# pybind11を検索・設定（Linux時のみ）
+if(TARGET_PLATFORM STREQUAL "linux")
+	find_package(pybind11 QUIET)
+	message(STATUS "pybind11_VERSION: ${pybind11_VERSION}")
+endif()
+
+# C++実行ファイルを作成
+set(SOURCES
+	src/main.cpp
+	#cpp/
+	#ここにコンパイルしたいファイルを書く
+	#
+)
+set(HEADERS
+	#src/include/
+	src/external/inipp.h
+	#headerをここに書いてもよい, その場合はadd_executableを変更
+)
+
+add_executable(main ${SOURCES} ${HEADERS}) # headerを含める場合
+
+# プラットフォーム固有のライブラリリンク
+if(TARGET_PLATFORM STREQUAL "linux")
+	target_link_libraries(main PRIVATE pybind11::embed)    # pybind11のembedライブラリリンク
+elseif(TARGET_PLATFORM STREQUAL "windows")
+	# Windows固有のライブラリがあればここに追加
+	# target_link_libraries(main PRIVATE some_windows_lib)
+endif()
+
+# コンパイルオプション
+target_compile_options(main PRIVATE ${COMMON_COMPILE_OPTIONS})
+
+# プロジェクトルートディレクトリをインクルードパスに追加
+#target_include_directories(main PRIVATE ${CMAKE_SOURCE_DIR})
+target_include_directories(main PRIVATE ${CMAKE_SOURCE_DIR} ${PYTHON_INCLUDE_DIR} ${PYBIND11_INCLUDE_DIR})
+		
+# IPO（Interprocedural Optimization）の設定
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+if(ipo_supported AND CMAKE_BUILD_TYPE STREQUAL "Release")
+	message(STATUS "IPO/LTO is supported and enabled for Release build")
+	set_target_properties(main PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+	message(STATUS "IPO/LTO not supported or Debug build: ${ipo_error}")
+endif()
+
+# カスタムターゲット：C++実行ファイルの実行（Linux時のみ）
+if(TARGET_PLATFORM STREQUAL "linux")
+	add_custom_target(run_cpp
+		COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${PYTHON_SITE_PACKAGES}:${PYTHON_PATH}" $<TARGET_FILE:main>
+		DEPENDS main
+		COMMENT "Running C++ executable with proper PYTHONPATH"
+	)
+elseif(TARGET_PLATFORM STREQUAL "windows")
+	add_custom_target(run_cpp
+		COMMAND echo "Windows executable created: $<TARGET_FILE:main>"
+		DEPENDS main
+		COMMENT "Windows cross-compilation completed"
+	)
+endif()
+
+# ビルド情報を表示
+message(STATUS "Target Platform: ${TARGET_PLATFORM}")
+message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "Executable will be: ${CMAKE_CURRENT_BINARY_DIR}/main${CMAKE_EXECUTABLE_SUFFIX}")

@@ -1,0 +1,139 @@
+# cmake -DTARGET_PLATFORM=linux -DCMAKE_BUILD_TYPE=Debug .. => debugモード
+# cmake -DTARGET_PLATFORM=linux .. => releaseモード(-O2)
+# make ビルド
+# make && ./main or make run_cppでビルド/実行
+
+# CMakeのバージョンを設定
+cmake_minimum_required(VERSION 3.13)
+
+# project名を設定
+project(OracleDbConnector)
+
+# C++標準(C++23)を設定
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ターゲットプラットフォームの設定
+set(TARGET_PLATFORM "linux" CACHE STRING "Target platform (linux or windows)")
+set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS "linux" "windows")
+
+if(TARGET_PLATFORM STREQUAL "windows")
+	message(STATUS "Configuring for Windows cross-compilation")
+	set(CMAKE_SYSTEM_NAME Windows)
+	set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)
+	set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
+	set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
+	set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
+	
+	# クロスコンパイル時の検索設定
+	set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+	set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+	set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+	set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+	
+    set(CMAKE_EXECUTABLE_SUFFIX .exe)
+endif()
+
+
+# ビルドタイプの設定（デフォルトはRelease）
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Releaseモードの最適化レベルを-O2に変更
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+
+# 共通コンパイルオプション
+set(COMMON_COMPILE_OPTIONS
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+# Pythonとpybind11の設定
+if(TARGET_PLATFORM STREQUAL "windows")
+    message(STATUS "Configuring Python/pybind11 for Windows cross-compilation")
+    
+    # WindowsのPythonインストールパスを定義
+	set(Python3_ROOT_DIR "/mnt/c/Users/rtkdm/AppData/Local/Programs/Python/Python313" CACHE PATH "Windows Python Installation Root" FORCE)
+	set(Python3_FIND_STRATEGY "LOCATION")
+	
+	# CMakeが探すべきPythonのライブラリとインクルードパスを明示的に指定
+	set(Python3_INCLUDE_DIRS "${Python3_ROOT_DIR}/include")
+	set(Python3_LIBRARIES "${Python3_ROOT_DIR}/libs/python313.lib")
+	set(Python3_Development "Found")
+	set(Python3_Development_Module "Found")
+	set(Python3_Development_Embed "Found")
+
+
+    set(pybind11_DIR "${Python3_ROOT_DIR}/Lib/site-packages/pybind11" CACHE PATH "pybind11 CMake directory")
+
+    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+    find_package(pybind11 REQUIRED)
+
+    # Windows固有のリンクオプション
+    # 静的リンクは多重定義エラーを引き起こすため削除
+    set(CMAKE_EXE_LINKER_FLAGS "")
+    
+else()
+    message(STATUS "Configuring for Linux")
+    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+    find_package(pybind11 REQUIRED)
+endif()
+
+# C++実行ファイルを作成
+set(SOURCES
+    src/main.cpp
+)
+set(HEADERS
+    src/external/inipp.h
+)
+
+add_executable(main ${SOURCES} ${HEADERS})
+
+# プラットフォーム固有のライブラリリンク
+if(TARGET_PLATFORM STREQUAL "linux")
+    target_link_libraries(main PRIVATE pybind11::embed)
+elseif(TARGET_PLATFORM STREQUAL "windows")
+    target_link_libraries(main PRIVATE 
+        pybind11::embed 
+        ${Python3_LIBRARIES}
+    )
+endif()
+
+# コンパイルオプション
+target_compile_options(main PRIVATE ${COMMON_COMPILE_OPTIONS})
+
+# プロジェクトルートディレクトリをインクルードパスに追加
+target_include_directories(main PRIVATE ${CMAKE_SOURCE_DIR})
+
+# IPO（Interprocedural Optimization）の設定
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+if(ipo_supported AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    message(STATUS "IPO/LTO is supported and enabled for Release build")
+    set_target_properties(main PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+else()
+    message(STATUS "IPO/LTO not supported or Debug build: ${ipo_error}")
+endif()
+
+# カスタムターゲット：C++実行ファイルの実行
+if(TARGET_PLATFORM STREQUAL "linux")
+    add_custom_target(run_cpp
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${PYTHON_SITE_PACKAGES}:${PYTHON_PATH}" $<TARGET_FILE:main>
+        DEPENDS main
+        COMMENT "Running C++ executable with proper PYTHONPATH"
+    )
+elseif(TARGET_PLATFORM STREQUAL "windows")
+    add_custom_target(run_cpp
+        COMMAND echo "Windows executable created: $<TARGET_FILE:main>"
+        DEPENDS main
+        COMMENT "Windows cross-compilation completed"
+    )
+endif()
+
+# ビルド情報を表示
+message(STATUS "Target Platform: ${TARGET_PLATFORM}")
+message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "Executable will be: ${CMAKE_CURRENT_BINARY_DIR}/main${CMAKE_EXECUTABLE_SUFFIX}")

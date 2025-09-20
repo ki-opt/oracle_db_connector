@@ -3,7 +3,6 @@
 # make ビルド
 # make && ./main or make run_cppでビルド/実行
 
-
 # CMakeのバージョンを設定
 cmake_minimum_required(VERSION 3.13)
 
