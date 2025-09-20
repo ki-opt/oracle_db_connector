@@ -1,6 +1,7 @@
 # https://write-remember.com/archives/6770/
 
 import oracledb
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 class PyOracleDbConnector():
 	def __init__(self, user, password, dsn_name):
@@ -36,7 +37,19 @@ class PyOracleDbConnector():
 		'''
 		self.pool.close()
 
-	
+	def run_queries_in_parallel(self, sqls):
+		'''
+		'''
+		def fetch_data(sql):
+			with self.pool.acquire() as connection:
+				with connection.cursor() as cursor:
+					cursor.execute(sql)
+					result = cursor.fetchall()
+					print(result)
+
+
+		with ThreadPoolExecutor(max_workers=2) as executor:
+			futures = [executor.submit(fetch_data, sql) for sql in sqls]
 
 	def test_sql(self):
 		'''

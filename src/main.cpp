@@ -64,14 +64,15 @@ public:
 			py::object py_oracle_db_connector = 
 				py_oracle_db_connector_object(user, password, dsn_name);
 			py_oracle_db_connector.attr("create_connection_pool")();
-			py_oracle_db_connector.attr("test_sql")();
-			py_oracle_db_connector.attr("close_connection_pool")();
 			
-			/*
 			py::list sqls;
 			sqls.append(query);
 			sqls.append(query);
+			py_oracle_db_connector.attr("run_queries_in_parallel")(sqls);
+			
+			py_oracle_db_connector.attr("close_connection_pool")();
 
+			/*
 			py::object result = py_oracle_db_connector.attr("run_queries_in_parallel")(sqls);
 			//std::string result_str = py::str(result);
 			//std::cout << result << std::endl;
