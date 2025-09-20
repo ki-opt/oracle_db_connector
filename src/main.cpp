@@ -27,7 +27,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/embed.h>
 
-#include "inipp.h"
+#include "src/external/inipp.h"
 
 #include <iostream>
 #include <fstream>

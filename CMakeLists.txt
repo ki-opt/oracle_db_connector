@@ -44,20 +44,24 @@ message(STATUS "pybind11_VERSION: ${pybind11_VERSION}")
 
 # C++実行ファイルを作成
 set(SOURCES
-	cpp/main.cpp
+	src/main.cpp
 	#cpp/
 	#ここにコンパイルしたいファイルを書く
 	#
 )
-#set(HEADER
-	#include/
+set(HEADER
+	#src/include/
+	src/external/inipp.h
 	#headerをここに書いてもよい, その場合はadd_executableを変更
-#)
-add_executable(main ${SOURCES})# ${HEADERS}) # headerを含める場合
+)
+add_executable(main ${SOURCES} ${HEADERS}) # headerを含める場合
 target_link_libraries(main PRIVATE pybind11::embed)	# pybind11のembedライブラリリンク
 
 # コンパイルオプション
 target_compile_options(main PRIVATE ${COMMON_COMPILE_OPTIONS})
+
+# プロジェクトルートディレクトリをインクルードパスに追加
+target_include_directories(main PRIVATE ${CMAKE_SOURCE_DIR})
 
 # カスタムターゲット：C++実行ファイルの実行
 add_custom_target(run_cpp
