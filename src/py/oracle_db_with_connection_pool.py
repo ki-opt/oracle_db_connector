@@ -19,7 +19,7 @@ class PyOracleDbConnector():
 		'''
 		print('test')
 
-	def create_connection_pool(self,):
+	def __create_connection_pool(self,):
 		''' コネクションプールの作成
 		'''
 		# コネクションプールの作成
@@ -32,24 +32,42 @@ class PyOracleDbConnector():
 				max=3,
 			)
 
-	def close_connection_pool(self):
+	def __close_connection_pool(self):
 		''' コネクションプールのクローズ
 		'''
 		self.pool.close()
 
-	def run_queries_in_parallel(self, sqls):
+	def run_queries_in_parallel(self, sqls, table_names):
 		'''
 		'''
-		def fetch_data(sql):
-			with self.pool.acquire() as connection:
-				with connection.cursor() as cursor:
-					cursor.execute(sql)
-					result = cursor.fetchall()
-					print(result)
+		def fetch_data(sql, table_name):
+			try:
+				with self.pool.acquire() as connection:
+					with connection.cursor() as cursor:
+						cursor.execute(sql)
+						result = cursor.fetchall()
+						return result, table_name, None
+			except Exception as e:
+				return [], None, e
+		
+		try:
+			self.__create_connection_pool()
 
+			with ThreadPoolExecutor(max_workers=2) as executor:
+				futures = [executor.submit(fetch_data, sql, table_name) for sql, table_name in zip(sqls, table_names)]
 
-		with ThreadPoolExecutor(max_workers=2) as executor:
-			futures = [executor.submit(fetch_data, sql) for sql in sqls]
+				results = {}
+				for future in as_completed(futures):
+					result, table_name, error_code = future.result()
+					results[table_name] = result
+			
+			return results
+		
+		except Exception as e:
+			return e
+	
+		finally:
+			self.__close_connection_pool()
 
 	def test_sql(self):
 		'''
