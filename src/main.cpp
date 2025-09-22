@@ -70,11 +70,11 @@ namespace {
 				sqls.append(query); table_names.append("0");
 				sqls.append(query); table_names.append("1");
 
-				// 
+				// sql発行
 				py::object results = py_oracle_db_connector
-											.attr("run_queries_in_parallel")(
-												sqls, table_names
-											);
+												.attr("run_queries_in_parallel")(
+													sqls, table_names
+												);
 				
 				// py::objectをdictにキャスト
 				py::dict results_dict = results.cast<py::dict>();
@@ -96,7 +96,6 @@ namespace {
 				
 			} catch (py::error_already_set &e) {
 				std::cerr << "Python実行エラー: " << e.what() << std::endl;
-				//return {};
 				return 1;
 			}
 		}
